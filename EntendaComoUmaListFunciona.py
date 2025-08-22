@@ -1,3 +1,4 @@
+#entenda como funciona uma lista encadeada, suas funções e toda ligação. Na main nós usamos o import deque, que é uma lista triplamente encadeada e mais segura, mas basicamente sua estrutura é esse código abaixo.
 # linked_list.py
 from models import Chamado
 
