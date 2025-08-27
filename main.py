@@ -4,12 +4,12 @@ from tkinter import messagebox, simpledialog, Toplevel, Label, Entry, Button, Op
 from collections import deque
 from models import Cliente, Atendente, Chamado
 
-# --- DADOS GLOBAIS ---
+# Iniciando a lista e o cliente/atendente padrão
 sistema_chamados = deque()
 cliente_logado = Cliente(1, "Cliente Padrão", "cliente@email.com")
 atendente_logado = Atendente(101, "Atendente Padrão")
 
-# Adicionando alguns dados de exemplo
+# dados exemplos
 sistema_chamados.append(Chamado(cliente_logado, "Meu computador não liga"))
 sistema_chamados.append(Chamado(cliente_logado, "Impressora está com problema no toner"))
 sistema_chamados.append(Chamado(cliente_logado, "A internet está muito lenta hoje"))
@@ -41,7 +41,7 @@ class MainApplication(tk.Tk):
         if hasattr(frame, 'on_show'):
             frame.on_show()
 
-# --- TELA DE LOGIN ---
+# TELA DE LOGIN
 class TelaLogin(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
@@ -73,11 +73,8 @@ class TelaLogin(tk.Frame):
         else:
             messagebox.showerror("Erro de Login", "Usuário ou senha inválidos.")
         
-        # Limpa os campos após a tentativa, caso queira
-        # self.user_entry.delete(0, 'end')
-        # self.pass_entry.delete(0, 'end')
 
-# --- TELA DO CLIENTE ---
+# TELA DO CLIENTE
 class TelaCliente(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
@@ -91,10 +88,10 @@ class TelaCliente(tk.Frame):
         self.chamados_listbox = tk.Listbox(self, width=80, height=10)
         self.chamados_listbox.pack(pady=5, padx=10)
         
-        # VVVVVV BOTÃO DE VOLTAR/LOGOUT ADICIONADO AQUI VVVVVV
+        # BOTÃO DE VOLTAR
         btn_logout = tk.Button(self, text="Voltar (Logout)", command=lambda: controller.show_frame("TelaLogin"))
         btn_logout.pack(pady=15)
-        # ^^^^^^ BOTÃO DE VOLTAR/LOGOUT ADICIONADO AQUI ^^^^^^
+        
 
     def on_show(self):
         self.atualizar_lista_chamados()
@@ -116,7 +113,7 @@ class TelaCliente(tk.Frame):
             for chamado in lista_de_chamados:
                 self.chamados_listbox.insert('end', f"  {chamado}")
 
-# --- TELA DO ATENDENTE ---
+# TELA DO ATENDENTE 
 class TelaAtendente(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
@@ -124,7 +121,7 @@ class TelaAtendente(tk.Frame):
         self.lista_atual = []
         self.indice_atual = 0
 
-        # ... (código do carrossel e da ordenação) ...
+        # ... (carrossel) ...
         frame_carrossel = tk.Frame(self, bd=2, relief="groove")
         frame_carrossel.pack(pady=10, padx=10, fill="x")
         tk.Label(frame_carrossel, text="Carrossel de Chamados", font=("Helvetica", 12)).pack()
@@ -146,10 +143,10 @@ class TelaAtendente(tk.Frame):
         self.chamados_ordenados_listbox = tk.Listbox(self, width=80, height=8)
         self.chamados_ordenados_listbox.pack(pady=5, padx=10, fill="x", expand=True)
 
-        # VVVVVV BOTÃO DE VOLTAR/LOGOUT ADICIONADO AQUI VVVVVV
+        #BOTÃO DE VOLTAR
         btn_logout = tk.Button(self, text="Voltar (Logout)", command=lambda: controller.show_frame("TelaLogin"))
         btn_logout.pack(pady=15)
-        # ^^^^^^ BOTÃO DE VOLTAR/LOGOUT ADICIONADO AQUI ^^^^^^
+        
 
 
     def on_show(self):
@@ -237,16 +234,18 @@ class PopupDetalhes(Toplevel):
         self.master.on_show()
         self.destroy()
 
+    
     def remover(self):
         global sistema_chamados
         if messagebox.askyesno("Confirmar", f"Tem certeza que deseja remover o chamado ID {self.chamado.idChamado}?"):
-            id_para_remover = self.chamado.idChamado
-            tamanho_antes = len(sistema_chamados)
-            sistema_chamados = deque([c for c in sistema_chamados if c.idChamado != id_para_remover])
-            if len(sistema_chamados) < tamanho_antes:
+            try:
+                sistema_chamados.remove(self.chamado)
+                
                 messagebox.showinfo("Sucesso", "Chamado removido.")
-            else:
-                messagebox.showerror("Erro", "Não foi possível encontrar e remover o chamado.")
+            except ValueError:
+                
+                messagebox.showerror("Erro", "Não foi possível encontrar o chamado para remover. Talvez já tenha sido removido.")
+            
             self.master.on_show()
             self.destroy()
 
