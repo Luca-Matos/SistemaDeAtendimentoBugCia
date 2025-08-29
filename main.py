@@ -3,15 +3,20 @@ import customtkinter as ctk
 from collections import deque
 from models import Cliente, Atendente, Chamado
 
+<<<<<<< HEAD
 # CONFIGURAÇÕES DE APARÊNCIA
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
 # DADOS GLOBAIS 
+=======
+# Iniciando a lista e o cliente/atendente padrão
+>>>>>>> fdf0e9fc5128e448c3261365c9205cf0a81b3e44
 sistema_chamados = deque()
 cliente_logado = Cliente(1, "Cliente Padrão", "cliente@email.com")
 atendente_logado = Atendente(101, "Atendente Padrão")
 
+<<<<<<< HEAD
 # Adicionando dados de exemplo
 sistema_chamados.append(Chamado(cliente_logado, "Computador não liga", "Aperto o botão e nada acontece."))
 chamado_impressora = Chamado(cliente_logado, "Impressora com problema", "A luz do toner está piscando.")
@@ -21,6 +26,12 @@ sistema_chamados.append(Chamado(cliente_logado, "Internet lenta", "Sites demoram
 chamado_urgente = Chamado(cliente_logado, "Servidor de arquivos offline", "Ninguém consegue acessar os arquivos da rede.")
 chamado_urgente.prioridade = 5
 sistema_chamados.append(chamado_urgente)
+=======
+# dados exemplos
+sistema_chamados.append(Chamado(cliente_logado, "Meu computador não liga"))
+sistema_chamados.append(Chamado(cliente_logado, "Impressora está com problema no toner"))
+sistema_chamados.append(Chamado(cliente_logado, "A internet está muito lenta hoje"))
+>>>>>>> fdf0e9fc5128e448c3261365c9205cf0a81b3e44
 
 
 class MainApplication(ctk.CTk):
@@ -53,6 +64,7 @@ class MainApplication(ctk.CTk):
         if hasattr(frame, 'on_show'):
             frame.on_show()
 
+<<<<<<< HEAD
 # Criar Chamado Cliente
 class PopupNovoChamado(ctk.CTkToplevel):
     
@@ -73,6 +85,10 @@ class PopupNovoChamado(ctk.CTkToplevel):
 # --- TELA DE LOGIN
 class TelaLogin(ctk.CTkFrame):
    
+=======
+# TELA DE LOGIN
+class TelaLogin(tk.Frame):
+>>>>>>> fdf0e9fc5128e448c3261365c9205cf0a81b3e44
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
@@ -82,6 +98,7 @@ class TelaLogin(ctk.CTkFrame):
         self.pass_entry = ctk.CTkEntry(login_frame, placeholder_text="Senha", show="*", width=200, font=controller.fonte_corpo); self.pass_entry.pack(pady=10, padx=20); self.pass_entry.insert(0, "atendente")
         ctk.CTkButton(login_frame, text="Login", font=controller.fonte_corpo, command=self.fazer_login).pack(pady=20, padx=20)
     def fazer_login(self):
+<<<<<<< HEAD
         user = self.user_entry.get(); pwd = self.pass_entry.get()
         if user == "cliente" and pwd == "cliente": self.controller.show_frame("TelaCliente")
         elif user == "atendente" and pwd == "atendente": self.controller.show_frame("TelaAtendente")
@@ -102,6 +119,48 @@ class TelaCliente(ctk.CTkFrame):
     def registrar_chamado(self): PopupNovoChamado(self, self.controller, self.salvar_novo_chamado)
     def salvar_novo_chamado(self, titulo, descricao):
         novo_chamado = Chamado(cliente_logado, titulo, descricao); sistema_chamados.append(novo_chamado); self.atualizar_lista_chamados()
+=======
+        user = self.user_entry.get()
+        pwd = self.pass_entry.get()
+        if user == "cliente" and pwd == "cliente":
+            self.controller.show_frame("TelaCliente")
+        elif user == "atendente" and pwd == "atendente":
+            self.controller.show_frame("TelaAtendente")
+        else:
+            messagebox.showerror("Erro de Login", "Usuário ou senha inválidos.")
+        
+
+# TELA DO CLIENTE
+class TelaCliente(tk.Frame):
+    def __init__(self, parent, controller):
+        super().__init__(parent)
+        self.controller = controller
+
+        label = tk.Label(self, text=f"Bem-vindo, {cliente_logado.nomeCliente}!", font=("Helvetica", 16))
+        label.pack(pady=10)
+        btn_registrar = tk.Button(self, text="Registrar Novo Chamado", command=self.registrar_chamado)
+        btn_registrar.pack(pady=10)
+        tk.Label(self, text="Seus Chamados Registrados:").pack(pady=10)
+        self.chamados_listbox = tk.Listbox(self, width=80, height=10)
+        self.chamados_listbox.pack(pady=5, padx=10)
+        
+        # BOTÃO DE VOLTAR
+        btn_logout = tk.Button(self, text="Voltar (Logout)", command=lambda: controller.show_frame("TelaLogin"))
+        btn_logout.pack(pady=15)
+        
+
+    def on_show(self):
+        self.atualizar_lista_chamados()
+
+    def registrar_chamado(self):
+        descricao = simpledialog.askstring("Novo Chamado", "Digite a descrição do seu problema:")
+        if descricao:
+            novo_chamado = Chamado(cliente_logado, descricao)
+            sistema_chamados.append(novo_chamado)
+            messagebox.showinfo("Sucesso", f"Chamado ID {novo_chamado.idChamado} registrado!")
+            self.atualizar_lista_chamados()
+
+>>>>>>> fdf0e9fc5128e448c3261365c9205cf0a81b3e44
     def atualizar_lista_chamados(self):
         for widget in self.scrollable_frame.winfo_children(): widget.destroy()
         lista_chamados_cliente = [c for c in sistema_chamados if c.requisitante == cliente_logado]
@@ -110,8 +169,13 @@ class TelaCliente(ctk.CTkFrame):
             label_text = f"ID: {chamado.idChamado} | Título: {chamado.titulo} | Status: {chamado.status}"
             ctk.CTkLabel(item_frame, text=label_text, font=self.controller.fonte_corpo).pack(anchor="w", padx=10, pady=10)
 
+<<<<<<< HEAD
 #TELA DO ATENDENTE
 class TelaAtendente(ctk.CTkFrame):
+=======
+# TELA DO ATENDENTE 
+class TelaAtendente(tk.Frame):
+>>>>>>> fdf0e9fc5128e448c3261365c9205cf0a81b3e44
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
@@ -126,6 +190,7 @@ class TelaAtendente(ctk.CTkFrame):
         self.chamado_selecionado = None
         self.botoes_chamado = {} # Dicionário para guardar os botões da lista
 
+<<<<<<< HEAD
         # Top Frame
         top_frame = ctk.CTkFrame(self, fg_color="transparent")
         top_frame.grid(row=0, column=0, padx=20, pady=(20,10), sticky="ew")
@@ -142,6 +207,34 @@ class TelaAtendente(ctk.CTkFrame):
         ctk.CTkButton(botoes_carrossel, text="< Anterior", command=self.anterior_chamado).pack(side="left", padx=5)
         ctk.CTkButton(botoes_carrossel, text="Detalhes/Editar", command=self.abrir_popup_detalhes).pack(side="left", padx=5)
         ctk.CTkButton(botoes_carrossel, text="Próximo >", command=self.proximo_chamado).pack(side="left", padx=5)
+=======
+        # ... (carrossel) ...
+        frame_carrossel = tk.Frame(self, bd=2, relief="groove")
+        frame_carrossel.pack(pady=10, padx=10, fill="x")
+        tk.Label(frame_carrossel, text="Carrossel de Chamados", font=("Helvetica", 12)).pack()
+        self.chamado_label = tk.Label(frame_carrossel, text="Nenhum chamado para exibir.", height=3, wraplength=450)
+        self.chamado_label.pack(pady=5)
+        botoes_carrossel = tk.Frame(frame_carrossel)
+        botoes_carrossel.pack()
+        tk.Button(botoes_carrossel, text="< Anterior", command=self.anterior_chamado).pack(side="left", padx=5)
+        tk.Button(botoes_carrossel, text="Próximo >", command=self.proximo_chamado).pack(side="left", padx=5)
+        tk.Button(botoes_carrossel, text="Detalhes/Editar", command=self.abrir_popup_detalhes).pack(side="left", padx=5)
+        frame_ordenacao = tk.Frame(self)
+        frame_ordenacao.pack(pady=10, padx=10, fill="x")
+        tk.Label(frame_ordenacao, text="Ordenar por:").pack(side="left")
+        self.ordem_var = StringVar(self)
+        self.ordem_var.set("Ordem de Chegada")
+        options = ["Ordem de Chegada", "Prioridade"]
+        ordem_menu = OptionMenu(frame_ordenacao, self.ordem_var, *options, command=self.ordenar_e_atualizar)
+        ordem_menu.pack(side="left", padx=5)
+        self.chamados_ordenados_listbox = tk.Listbox(self, width=80, height=8)
+        self.chamados_ordenados_listbox.pack(pady=5, padx=10, fill="x", expand=True)
+
+        #BOTÃO DE VOLTAR
+        btn_logout = tk.Button(self, text="Voltar (Logout)", command=lambda: controller.show_frame("TelaLogin"))
+        btn_logout.pack(pady=15)
+        
+>>>>>>> fdf0e9fc5128e448c3261365c9205cf0a81b3e44
 
         
         controles_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -277,10 +370,32 @@ class PopupDetalhes(ctk.CTkToplevel):
     def salvar(self):
         self.chamado.atualizar(self.titulo_entry.get(), self.desc_textbox.get("1.0", "end-1c"), self.prioridade_var.get()); self.master_frame.on_show(); self.destroy()
     def resolver(self):
+<<<<<<< HEAD
         self.chamado.resolver(); self.master_frame.on_show(); self.destroy()
     def remover(self):
         global sistema_chamados; id_para_remover = self.chamado.idChamado; sistema_chamados = deque([c for c in sistema_chamados if c.idChamado != id_para_remover]); self.master_frame.on_show(); self.destroy()
 
+=======
+        self.chamado.resolver()
+        messagebox.showinfo("Sucesso", "Chamado marcado como resolvido.")
+        self.master.on_show()
+        self.destroy()
+
+    
+    def remover(self):
+        global sistema_chamados
+        if messagebox.askyesno("Confirmar", f"Tem certeza que deseja remover o chamado ID {self.chamado.idChamado}?"):
+            try:
+                sistema_chamados.remove(self.chamado)
+                
+                messagebox.showinfo("Sucesso", "Chamado removido.")
+            except ValueError:
+                
+                messagebox.showerror("Erro", "Não foi possível encontrar o chamado para remover. Talvez já tenha sido removido.")
+            
+            self.master.on_show()
+            self.destroy()
+>>>>>>> fdf0e9fc5128e448c3261365c9205cf0a81b3e44
 
 if __name__ == "__main__":
     app = MainApplication()
