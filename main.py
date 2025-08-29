@@ -7,7 +7,7 @@ from models import Cliente, Atendente, Chamado
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
-# DADOS GLOBAIS 
+# DADOS GLOBAIS
 sistema_chamados = deque()
 cliente_logado = Cliente(1, "Cliente Padrão", "cliente@email.com")
 atendente_logado = Atendente(101, "Atendente Padrão")
@@ -27,7 +27,7 @@ class MainApplication(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("HelpDesk Moderno v2.0")
-        self.geometry("800x650") 
+        self.geometry("800x650")
 
         self.fonte_titulo = ctk.CTkFont(family="Roboto", size=24, weight="bold")
         self.fonte_corpo = ctk.CTkFont(family="Roboto", size=14)
@@ -55,7 +55,7 @@ class MainApplication(ctk.CTk):
 
 # Criar Chamado Cliente
 class PopupNovoChamado(ctk.CTkToplevel):
-    
+
     def __init__(self, master, controller, callback):
         super().__init__(master)
         self.callback = callback
@@ -72,7 +72,7 @@ class PopupNovoChamado(ctk.CTkToplevel):
 
 # --- TELA DE LOGIN
 class TelaLogin(ctk.CTkFrame):
-   
+
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
@@ -89,7 +89,7 @@ class TelaLogin(ctk.CTkFrame):
 
 # TELA DO CLIENTE
 class TelaCliente(ctk.CTkFrame):
-    
+
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller; self.grid_columnconfigure(0, weight=1); self.grid_rowconfigure(1, weight=1)
@@ -115,16 +115,13 @@ class TelaAtendente(ctk.CTkFrame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
-        
+
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(3, weight=1) 
-        
+        self.grid_rowconfigure(3, weight=1)
+
         self.lista_atual = [] # visualização ordenada
         self.indice_atual = 0
-        
-       
-        self.chamado_selecionado = None
-        self.botoes_chamado = {} # Dicionário para guardar os botões da lista
+        self.chamado_para_mover = None # Guarda o chamado selecionado para mover
 
         # Top Frame
         top_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -143,7 +140,7 @@ class TelaAtendente(ctk.CTkFrame):
         ctk.CTkButton(botoes_carrossel, text="Detalhes/Editar", command=self.abrir_popup_detalhes).pack(side="left", padx=5)
         ctk.CTkButton(botoes_carrossel, text="Próximo >", command=self.proximo_chamado).pack(side="left", padx=5)
 
-        
+
         controles_frame = ctk.CTkFrame(self, fg_color="transparent")
         controles_frame.grid(row=2, column=0, padx=20, pady=5, sticky="ew")
         controles_frame.grid_columnconfigure(1, weight=1)
@@ -154,82 +151,88 @@ class TelaAtendente(ctk.CTkFrame):
                                                        variable=self.ordem_var, command=self.ordenar_e_atualizar)
         self.segmented_button.pack(side="left", padx=10)
 
-        # tem que atualizar
-        self.btn_mover_fim = ctk.CTkButton(controles_frame, text="Mover para Fim", state="disabled", command=self.mover_para_fim)
-        self.btn_mover_fim.pack(side="right")
-        self.btn_mover_inicio = ctk.CTkButton(controles_frame, text="Mover para Início", state="disabled", command=self.mover_para_inicio)
-        self.btn_mover_inicio.pack(side="right", padx=10)
-
-
         # Lista Ordenada
         self.scrollable_frame = ctk.CTkScrollableFrame(self, label_text="Fila de Chamados")
         self.scrollable_frame.grid(row=3, column=0, padx=20, pady=(0, 20), sticky="nsew")
 
-    # selecionar um chamado na lista
-    def selecionar_chamado(self, chamado, botao_clicado):
-        self.chamado_selecionado = chamado
-        
-        # botões de ação
-        self.btn_mover_inicio.configure(state="normal")
-        self.btn_mover_fim.configure(state="normal")
+    def manipular_clique_lista(self, chamado_clicado):
+        """Gerencia a seleção e movimentação de chamados na lista."""
+        # Só permite reordenar na visualização "Padrão"
+        if self.ordem_var.get() != "Padrão":
+            return
 
-        # Feedback visual
-        for btn in self.botoes_chamado.values():
-            btn.configure(fg_color=ctk.ThemeManager.theme["CTkButton"]["fg_color"])
-        botao_clicado.configure(fg_color="#1F6AA5") 
+        global sistema_chamados
 
-    
-    def mover_para_inicio(self):
-        if self.chamado_selecionado:
-            global sistema_chamados
-            sistema_chamados.remove(self.chamado_selecionado)
-            sistema_chamados.appendleft(self.chamado_selecionado)
-            self.on_show() # Atualiza toda a tela
+        # Caso 1: Nenhum chamado está selecionado para mover. Seleciona o atual.
+        if self.chamado_para_mover is None:
+            self.chamado_para_mover = chamado_clicado
+            self.scrollable_frame.configure(label_text="Clique na nova posição para o chamado (ou clique novamente para cancelar)")
 
-    def mover_para_fim(self):
-        if self.chamado_selecionado:
-            global sistema_chamados
-            sistema_chamados.remove(self.chamado_selecionado)
-            sistema_chamados.append(self.chamado_selecionado)
-            self.on_show() # Atualiza toda a tela
+        # Caso 2: O usuário clica no mesmo chamado que já está selecionado. Cancela a operação.
+        elif self.chamado_para_mover == chamado_clicado:
+            self.resetar_modo_mover()
+
+        # Caso 3: Um chamado está selecionado, e o usuário clica em outro. Move o chamado.
+        else:
+            try:
+                # Usa o deque original para a lógica de movimentação
+                index_destino = list(sistema_chamados).index(chamado_clicado)
+
+                # Realiza a movimentação no deque
+                sistema_chamados.remove(self.chamado_para_mover)
+                sistema_chamados.insert(index_destino, self.chamado_para_mover)
+            except ValueError:
+                print("Erro: Chamado não encontrado na fila principal para movimentação.")
+            finally:
+                # Reseta o estado e atualiza a tela
+                self.resetar_modo_mover()
+                self.on_show()
+                return # Evita a atualização dupla da lista
+
+        # Atualiza apenas a lista para refletir a mudança de cor/label
+        self.atualizar_lista_ordenada()
+
+    def resetar_modo_mover(self):
+        """Reseta o estado da funcionalidade de mover chamados."""
+        self.chamado_para_mover = None
+        self.scrollable_frame.configure(label_text="Fila de Chamados")
 
     def on_show(self):
-        # se nao tiver selecionado, desabilita os botoes
-        self.chamado_selecionado = None
-        self.btn_mover_inicio.configure(state="disabled")
-        self.btn_mover_fim.configure(state="disabled")
+        self.resetar_modo_mover()
         self.ordenar_e_atualizar(self.ordem_var.get())
 
-    
+
     def ordenar_e_atualizar(self, ordem_selecionada):
+        self.resetar_modo_mover() # Garante que o modo de mover seja resetado ao trocar a ordem
         if ordem_selecionada == "Prioridade":
-            
             self.lista_atual = sorted(list(sistema_chamados), key=lambda c: (-c.prioridade, c.dataAbertura))
-        else: 
+        else:
             self.lista_atual = list(sistema_chamados)
-        
-        
+
+        # O carrossel sempre reflete a ordem do deque original (Padrão)
         self.atualizar_carrossel(list(sistema_chamados))
         self.atualizar_lista_ordenada()
 
     def atualizar_lista_ordenada(self):
         for widget in self.scrollable_frame.winfo_children(): widget.destroy()
-        self.botoes_chamado.clear() # Limpa o dicionário de botões
-        
+
         for chamado in self.lista_atual:
-            
             label_text = f"ID: {chamado.idChamado} | Prio: {chamado.prioridade} | Título: {chamado.titulo} ({chamado.status})"
-            
-            
             item_button = ctk.CTkButton(self.scrollable_frame, text=label_text, font=self.controller.fonte_pequena, anchor="w")
-            item_button.configure(command=lambda c=chamado, b=item_button: self.selecionar_chamado(c, b))
+
+            # Define a ação do botão
+            item_button.configure(command=lambda c=chamado: self.manipular_clique_lista(c))
+
+            # Muda a cor se o item estiver selecionado para ser movido
+            if self.chamado_para_mover == chamado:
+                item_button.configure(fg_color="#1F6AA5") # Cor de destaque
+
             item_button.pack(fill="x", padx=10, pady=5)
-            
-            self.botoes_chamado[chamado.idChamado] = item_button
+
 
     def atualizar_carrossel(self, lista_base):
         if not lista_base: self.chamado_label.configure(text="Nenhum chamado para exibir."); return
-        
+
         # Garante que o índice não estoure se a lista diminuir
         if self.indice_atual >= len(lista_base):
             self.indice_atual = 0
@@ -261,7 +264,7 @@ class PopupDetalhes(ctk.CTkToplevel):
     def __init__(self, master, controller, chamado):
         super().__init__(master)
         self.master_frame = master
-        
+
         self.chamado = chamado
         self.title(f"Detalhes do Chamado ID: {chamado.idChamado}"); self.geometry("500x550"); self.transient(master)
         ctk.CTkLabel(self, text="Título:", font=controller.fonte_corpo).pack(pady=(20, 5), padx=20, anchor="w")
