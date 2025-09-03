@@ -238,7 +238,7 @@ class TelaAtendente(ctk.CTkFrame):
             self.indice_atual = 0
 
         chamado_atual = lista_base[self.indice_atual]
-        texto = f"ID: {chamado_atual.idChamado} | Título: {chamado_atual.titulo}\nData: {chamado_atual.dataAbertura.strftime('%d/%m/%Y')} | Prioridade: {chamado_atual.prioridade}"
+        texto = f"ID: {chamado_atual.idChamado} | Título: {chamado_atual.titulo}\n\nDescrição: {chamado_atual.descricao}\n\nData: {chamado_atual.dataAbertura.strftime('%d/%m/%Y')} | Prioridade: {chamado_atual.prioridade}"
         self.chamado_label.configure(text=texto)
 
     def proximo_chamado(self):
