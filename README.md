@@ -36,7 +36,7 @@ Python 3.8 ou superior instalado.
 
 Passos para a Instalação :
 Clone o repositório:
-git clone [https://github.com/seu-usuario/seu-repositorio.git](https://github.com/seu-usuario/seu-repositorio.git)
+git clone 
 cd seu-repositorio
 
 Crie e ative um ambiente virtual (Recomendado): (Isso isola as dependências do seu projeto e evita conflitos com outros projetos Python.)
