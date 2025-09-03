@@ -157,25 +157,25 @@ class TelaAtendente(ctk.CTkFrame):
 
     def manipular_clique_lista(self, chamado_clicado):
         """Gerencia a seleção e movimentação de chamados na lista."""
-        # Só permite reordenar na visualização "Padrão"
+        # Só pode mexer na ordem se a ordenação estiver padrão
         if self.ordem_var.get() != "Padrão":
             return
 
         global sistema_chamados
 
-        # Caso 1: Nenhum chamado está selecionado para mover. Seleciona o atual.
+        # Caso 1: Seleciona o chamado clicado.
         if self.chamado_para_mover is None:
             self.chamado_para_mover = chamado_clicado
             self.scrollable_frame.configure(label_text="Clique na nova posição para o chamado (ou clique novamente para cancelar)")
 
-        # Caso 2: O usuário clica no mesmo chamado que já está selecionado. Cancela a operação.
+        # Caso 2: Clica no mesmo chamado = Cancela a operação.
         elif self.chamado_para_mover == chamado_clicado:
             self.resetar_modo_mover()
 
         # Caso 3: Um chamado está selecionado, e o usuário clica em outro. Move o chamado.
         else:
             try:
-                # Usa o deque original para a lógica de movimentação
+                # Usa o deque original para descobrir o indice do chamado escolhido
                 index_destino = list(sistema_chamados).index(chamado_clicado)
 
                 # Realiza a movimentação no deque
@@ -184,12 +184,12 @@ class TelaAtendente(ctk.CTkFrame):
             except ValueError:
                 print("Erro: Chamado não encontrado na fila principal para movimentação.")
             finally:
-                # Reseta o estado e atualiza a tela
+                # Reseta o estado para não mover novamente
                 self.resetar_modo_mover()
                 self.on_show()
-                return # Evita a atualização dupla da lista
+                return 
 
-        # Atualiza apenas a lista para refletir a mudança de cor/label
+        # Atualiza a lista pós click
         self.atualizar_lista_ordenada()
 
     def resetar_modo_mover(self):
@@ -209,7 +209,7 @@ class TelaAtendente(ctk.CTkFrame):
         else:
             self.lista_atual = list(sistema_chamados)
 
-        # O carrossel sempre reflete a ordem do deque original (Padrão)
+        # O carrossel reflete a ordem do deque original
         self.atualizar_carrossel(list(sistema_chamados))
         self.atualizar_lista_ordenada()
 
@@ -225,7 +225,7 @@ class TelaAtendente(ctk.CTkFrame):
 
             # Muda a cor se o item estiver selecionado para ser movido
             if self.chamado_para_mover == chamado:
-                item_button.configure(fg_color="#1F6AA5") # Cor de destaque
+                item_button.configure(fg_color="#1F6AA5") # Cor
 
             item_button.pack(fill="x", padx=10, pady=5)
 
@@ -282,7 +282,7 @@ class PopupDetalhes(ctk.CTkToplevel):
     def resolver(self):
         self.chamado.resolver(); self.master_frame.on_show(); self.destroy()
     def remover(self):
-        global sistema_chamados; id_para_remover = self.chamado.idChamado; sistema_chamados = deque([c for c in sistema_chamados if c.idChamado != id_para_remover]); self.master_frame.on_show(); self.destroy()
+        global sistema_chamados; sistema_chamados.remove(self.chamado); self.master_frame.on_show(); self.destroy()
 
 
 if __name__ == "__main__":
