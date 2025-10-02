@@ -8,7 +8,7 @@ import tkinter.filedialog as filedialog
 
 # CONFIGURAÇÕES DE APARÊNCIA
 ctk.set_appearance_mode("dark")
-ctk.set_default_color_theme("green")
+ctk.set_default_color_theme("blue")
 
 # DADOS GLOBAIS
 sistema_chamados = deque()
