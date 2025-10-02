@@ -4,22 +4,24 @@ Um sistema de suporte com interface gráfica moderna e responsiva para gerenciam
 
 Sobre o Projeto: 
 
-Este projeto implementa uma solução de suporte que permite a interação de dois tipos de usuários: Clientes e Atendentes. Clientes podem abrir e visualizar seus chamados, enquanto os Atendentes possuem uma visão completa para gerenciar, priorizar, editar e resolver os chamados de toda a fila.
-A aplicação utiliza uma estrutura de dados de fila (deque) para gerenciar os chamados, permitindo uma manipulação eficiente das solicitações de suporte.
+Este projeto implementa uma solução de suporte que permite a interação de dois tipos de usuários: Clientes e Atendentes. Clientes podem abrir, editar e visualizar seus chamados, enquanto os Atendentes possuem uma visão completa para gerenciar, priorizar, editar e resolver os chamados de toda a fila.
+A aplicação utiliza uma estrutura de dados de fila (deque) para gerenciar os chamados, permitindo uma manipulação eficiente das solicitações de suporte e a estrutura de dados de pilha para salvar os rascunhos dos chamados.
 
 Funcionalidades Principais:
 
 Sistema de Login: Distinção de perfis entre Cliente e Atendente.
 
-Painel do Cliente: Permite ao cliente criar novos chamados e visualizar o status dos chamados já abertos.
+Painel do Cliente: Permite ao cliente criar novos chamados, editar e visualizar o status dos chamados já abertos.
 
-Painel do Atendente:Visualização da fila de chamados em um carrossel.
+Painel do Atendente: Visualização da fila de chamados em um carrossel.
 
 Ordenação da lista de chamados por ordem de chegada ou por prioridade.
 
 Edição completa dos detalhes de um chamado (título, descrição, prioridade).
 
 Possibilidade de reordenar manualmente os chamados na fila (arrastar e soltar simulado por cliques).
+
+Funcionalidade "Desfazer" para voltar para um rascunho antigo salvo do chamado.
 
 Resolução e remoção de chamados.
 
@@ -47,6 +49,10 @@ python -m venv venv
 Instale a dependência principal: O projeto utiliza a biblioteca CustomTkinter. Use o seguinte comando para instalá-la:
 
 pip install customtkinter
+
+Além dessa, instale a biblioteca usada para gerar o relatório em PDF:
+
+pip install fpdf2
 
 Instruções de Execução: 
 Com o ambiente virtual ativado e a dependência instalada, execute o arquivo principal para iniciar a aplicação:

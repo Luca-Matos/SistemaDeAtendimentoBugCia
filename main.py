@@ -1,11 +1,14 @@
 # modern_main.py
+import os
+
 import customtkinter as ctk
 from collections import deque
 from models import Cliente, Atendente, Chamado
+import tkinter.filedialog as filedialog
 
 # CONFIGURAÇÕES DE APARÊNCIA
 ctk.set_appearance_mode("dark")
-ctk.set_default_color_theme("blue")
+ctk.set_default_color_theme("green")
 
 # DADOS GLOBAIS
 sistema_chamados = deque()
@@ -99,6 +102,7 @@ class TelaCliente(ctk.CTkFrame):
         ctk.CTkButton(top_frame, text="Novo Chamado", font=controller.fonte_corpo, command=self.registrar_chamado).pack(side="right", padx=10)
         self.scrollable_frame = ctk.CTkScrollableFrame(self, label_text="Meus Chamados"); self.scrollable_frame.grid(row=1, column=0, padx=20, pady=(0, 20), sticky="nsew")
     def on_show(self): self.atualizar_lista_chamados()
+
     def registrar_chamado(self): PopupNovoChamado(self, self.controller, self.salvar_novo_chamado)
     def salvar_novo_chamado(self, titulo, descricao):
         novo_chamado = Chamado(cliente_logado, titulo, descricao); sistema_chamados.append(novo_chamado); self.atualizar_lista_chamados()
@@ -106,9 +110,22 @@ class TelaCliente(ctk.CTkFrame):
         for widget in self.scrollable_frame.winfo_children(): widget.destroy()
         lista_chamados_cliente = [c for c in sistema_chamados if c.requisitante == cliente_logado]
         for chamado in lista_chamados_cliente:
-            item_frame = ctk.CTkFrame(self.scrollable_frame); item_frame.pack(fill="x", padx=10, pady=5)
-            label_text = f"ID: {chamado.idChamado} | Título: {chamado.titulo} | Status: {chamado.status}"
-            ctk.CTkLabel(item_frame, text=label_text, font=self.controller.fonte_corpo).pack(anchor="w", padx=10, pady=10)
+            label_text = (f"ID: {chamado.idChamado} | Título: {chamado.titulo} | "
+                          f"Data: {chamado.dataAbertura.strftime('%d/%m')} | Status: {chamado.status}")
+            
+            item_button = ctk.CTkButton(
+                self.scrollable_frame, 
+                text=label_text, 
+                font=self.controller.fonte_corpo, 
+                anchor="w",
+                # Comando que abre a nova janela de detalhes ao clicar
+                command=lambda c=chamado: self.abrir_detalhes_cliente(c)
+            )
+            item_button.pack(fill="x", padx=10, pady=5)
+    
+    def abrir_detalhes_cliente(self, chamado_clicado):
+        """Abre o pop-up de detalhes e edição para o cliente."""
+        PopupDetalhesCliente(self, self.controller, chamado_clicado)
 
 #TELA DO ATENDENTE
 class TelaAtendente(ctk.CTkFrame):
@@ -187,7 +204,7 @@ class TelaAtendente(ctk.CTkFrame):
                 # Reseta o estado para não mover novamente
                 self.resetar_modo_mover()
                 self.on_show()
-                return 
+                return
 
         # Atualiza a lista pós click
         self.atualizar_lista_ordenada()
@@ -260,29 +277,180 @@ class TelaAtendente(ctk.CTkFrame):
         PopupDetalhes(self, self.controller, chamado_para_editar)
 
 
+class PopupDetalhesCliente(ctk.CTkToplevel):
+    def __init__(self, master, controller, chamado):
+        super().__init__(master)
+        self.master_frame = master
+        self.controller = controller
+        self.chamado = chamado
+        
+        self.title(f"Chamado ID: {chamado.idChamado} - {chamado.status}")
+        self.geometry("500x450")
+        self.transient(master)
+
+        # Usamos uma frame para agrupar os campos editáveis
+        edit_frame = ctk.CTkFrame(self, fg_color="transparent")
+        edit_frame.pack(fill="both", expand=True, padx=20, pady=10)
+
+        # Título
+        ctk.CTkLabel(edit_frame, text="Título do Chamado:", font=controller.fonte_corpo).pack(pady=(10, 5), anchor="w")
+        self.titulo_entry = ctk.CTkEntry(edit_frame, font=controller.fonte_corpo)
+        self.titulo_entry.insert(0, chamado.titulo)
+        self.titulo_entry.pack(fill='x')
+
+        # Descrição
+        ctk.CTkLabel(edit_frame, text="Descrição Detalhada:", font=controller.fonte_corpo).pack(pady=(10, 5), anchor="w")
+        self.desc_textbox = ctk.CTkTextbox(edit_frame, font=controller.fonte_pequena)
+        self.desc_textbox.insert("1.0", chamado.descricao)
+        self.desc_textbox.pack(fill='both', expand=True)
+
+        # Informação Não-Editável
+        ctk.CTkLabel(edit_frame, text=f"Status: {chamado.status}", font=controller.fonte_pequena).pack(pady=(10, 0), anchor="w")
+        
+        # Frame de Botões
+        btn_frame = ctk.CTkFrame(self, fg_color="transparent")
+        btn_frame.pack(pady=10)
+
+        # Botão Desfazer
+        self.btn_desfazer = ctk.CTkButton(btn_frame, text="Desfazer", command=self.desfazer_e_atualizar_ui)
+        self.btn_desfazer.pack(side="left", padx=5)
+
+        # Botão Salvar
+        ctk.CTkButton(btn_frame, text="Salvar Alterações", command=self.salvar).pack(side="left", padx=10)
+        
+        self.atualizar_estado_botoes() # Inicializa o estado do botão Desfazer
+
+    def salvar(self):
+        # O cliente não pode alterar a prioridade, então usamos a prioridade atual do chamado.
+        self.chamado.atualizar(
+            self.titulo_entry.get(),
+            self.desc_textbox.get("1.0", "end-1c"),
+        #   self.chamado.prioridade # Mantém a prioridade atual
+        )
+        self.master_frame.on_show() # Atualiza a lista na tela do cliente
+        self.destroy()
+
+    def desfazer_e_atualizar_ui(self):
+        if self.chamado.desfazer_alteracao():
+            # Atualiza os campos da UI com os dados do Chamado
+            self.titulo_entry.delete(0, ctk.END)
+            self.titulo_entry.insert(0, self.chamado.titulo)
+            self.desc_textbox.delete("1.0", ctk.END)
+            self.desc_textbox.insert("1.0", self.chamado.descricao)
+            
+            # Atualiza o label não-editável com o status/prioridade
+            self.master_frame.on_show() 
+            print("Alteração desfeita. Estado anterior restaurado.")
+        
+        self.atualizar_estado_botoes()
+
+    def atualizar_estado_botoes(self):
+        # A lógica de estado (len > 1) é a mesma do atendente
+        if len(self.chamado._historico_rascunhos) > 1:
+            self.btn_desfazer.configure(state="normal")
+        else:
+            self.btn_desfazer.configure(state="disabled")
+
+
+
+
 class PopupDetalhes(ctk.CTkToplevel):
     def __init__(self, master, controller, chamado):
         super().__init__(master)
         self.master_frame = master
-
         self.chamado = chamado
-        self.title(f"Detalhes do Chamado ID: {chamado.idChamado}"); self.geometry("500x550"); self.transient(master)
+
+        #NOVO#
+        self.title(f"Detalhes do Chamado ID: {chamado.idChamado}"); self.geometry("700x550"); self.transient(master)
         ctk.CTkLabel(self, text="Título:", font=controller.fonte_corpo).pack(pady=(20, 5), padx=20, anchor="w")
         self.titulo_entry = ctk.CTkEntry(self, font=controller.fonte_corpo); self.titulo_entry.insert(0, chamado.titulo); self.titulo_entry.pack(padx=20, fill='x')
         ctk.CTkLabel(self, text="Descrição:", font=controller.fonte_corpo).pack(pady=(15, 5), padx=20, anchor="w")
         self.desc_textbox = ctk.CTkTextbox(self, font=controller.fonte_pequena); self.desc_textbox.insert("1.0", chamado.descricao); self.desc_textbox.pack(padx=20, fill='both', expand=True)
         ctk.CTkLabel(self, text="Prioridade (1-5):", font=controller.fonte_corpo).pack(pady=(15, 5))
         self.prioridade_var = ctk.StringVar(self, value=str(chamado.prioridade)); ctk.CTkOptionMenu(self, variable=self.prioridade_var, values=["1", "2", "3", "4", "5"]).pack()
-        btn_frame = ctk.CTkFrame(self, fg_color="transparent"); btn_frame.pack(pady=20)
+
+        #NOVO
+        btn_frame = ctk.CTkFrame(self, fg_color="transparent");
+        btn_frame.pack(pady=20)
+
+        # Adicionar botão Desfazer
+        self.btn_desfazer = ctk.CTkButton(btn_frame, text="Desfazer", command=self.desfazer_e_atualizar_ui)
+
+        self.btn_desfazer.pack(side="left", padx=5)
+        self.atualizar_estado_botoes_desfazer()
+
+        # NOVO: Botão para gerar relatório em PDF
+        self.btn_relatorio_pdf = ctk.CTkButton(
+            btn_frame,
+            text="Gerar Relatório PDF",
+            command=self.gerar_pdf # Chama o novo método
+        )
+        self.btn_relatorio_pdf.pack(side="left", padx=5)
+
+
+        #NOVO#
         ctk.CTkButton(btn_frame, text="Salvar Alterações", command=self.salvar).pack(side="left", padx=5)
         ctk.CTkButton(btn_frame, text="Resolver", command=self.resolver).pack(side="left", padx=5)
         ctk.CTkButton(btn_frame, text="Remover", command=self.remover, fg_color="#D32F2F", hover_color="#B71C1C").pack(side="left", padx=5)
+
+    #NOVO#
+    def atualizar_estado_botoes_desfazer(self):
+        # A condição agora verifica o tamanho da pilha do objeto Chamado
+        if len(self.chamado._historico_rascunhos) > 1:
+            self.btn_desfazer.configure(state="normal")
+        else:
+            self.btn_desfazer.configure(state="disabled")
+    #NOVO#
+
     def salvar(self):
-        self.chamado.atualizar(self.titulo_entry.get(), self.desc_textbox.get("1.0", "end-1c"), self.prioridade_var.get()); self.master_frame.on_show(); self.destroy()
+        # A lógica é simplificada, pois o chamado já salva o rascunho
+        self.chamado.atualizar(self.titulo_entry.get(), self.desc_textbox.get("1.0", "end-1c"), self.prioridade_var.get())
+        # A interface é atualizada
+        self.master_frame.on_show()
+        self.destroy()
+
+    # NOVO: Função para chamar a geração do PDF
+    def gerar_pdf(self):
+        nome_sugerido = f"relatorio_chamado_{self.chamado.idChamado}.pdf"
+
+        caminho_arquivo = filedialog.asksaveasfilename(
+            initialfile=nome_sugerido,
+            defaultextension=".pdf",
+            filetypes=[("arquivos PDF", ".pdf"), ("Todos os arquivos", ",*")],
+            title="Salvar PDF como")
+
+        if caminho_arquivo:
+            try:
+                self.chamado.gerar_relatorio_pdf(caminho_arquivo)
+                print(f"PDF gerado com sucesso: {caminho_arquivo}")
+            except Exception as e:
+                print(f"ERRO ao gerar o PDF no caminho: {e}")
+        else:
+            print("geração de PDF cancelada pelo usuario")
+
+    def desfazer_e_atualizar_ui(self):
+
+        # Chama o método do próprio chamado para desfazer a alteração
+
+        if self.chamado.desfazer_alteracao():
+            # Se a alteração foi desfeita, atualiza a interface
+            self.titulo_entry.delete(0, "end")
+            self.titulo_entry.insert(0, self.chamado.titulo)
+            self.desc_textbox.delete("1.0", "end")
+            self.desc_textbox.insert("1.0", self.chamado.descricao)
+            self.prioridade_var.set(str(self.chamado.prioridade))
+            print("Alteração desfeita. Estado anterior restaurado.")
+
     def resolver(self):
-        self.chamado.resolver(); self.master_frame.on_show(); self.destroy()
+        self.chamado.resolver()
+        self.master_frame.on_show()
+        self.destroy()
+
     def remover(self):
-        global sistema_chamados; sistema_chamados.remove(self.chamado); self.master_frame.on_show(); self.destroy()
+        global sistema_chamados
+        sistema_chamados.remove(self.chamado)
+        self.master_frame.on_show()
+        self.destroy()
 
 
 if __name__ == "__main__":
