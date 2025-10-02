@@ -46,11 +46,18 @@ class Chamado:
     Gerencia seu próprio histórico de alterações para a funcionalidade de 'desfazer'
     e para a geração de relatórios.
     """
+
+    # Variável de classe para garantir que cada chamado tenha um ID único.
     _id_counter = 1
 
     def __init__(self, cliente_ou_atendente, titulo: str, descricao: str):
+        """Inicializa um novo objeto Chamado."""
+
+        # Atribui o ID único e incrementa o contador para o próximo chamado.
         self.idChamado = Chamado._id_counter
         Chamado._id_counter += 1
+
+        # Atributos básicos do chamado.
         self.requisitante = cliente_ou_atendente
         self.titulo = titulo
         self.descricao = descricao
@@ -62,16 +69,25 @@ class Chamado:
         # NOVO: Adiciona o controle de versão.
         self.versao = 1
 
+
         self._historico_alteracoes = []
+
+        # Inicializa uma deque (fila de duas pontas) para armazenar o histórico de estados
         self._historico_rascunhos = deque(maxlen=20)
+
+        # Salva e Registra a criação como a primeira alteração
         self.salvar_rascunho()
         self._registrar_alteracao("Chamado criado")
 
     def _registrar_alteracao(self, detalhe: str):
+        """
+               Atualiza os dados do chamado e salva o estado anterior no histórico.
+               Registra as alterações detalhadas para o relatório PDF.
+               """
         data = datetime.now()
         self._historico_alteracoes.append({'data': data, 'detalhes': detalhe})
 
-    # NOVO: Método para registrar a visualização pelo atendente.
+    # Método para registrar a visualização pelo atendente.
     def registrar_visualizacao(self, ator):
         """Registra no histórico que um atendente visualizou o chamado."""
         if isinstance(ator, Atendente):
@@ -90,9 +106,12 @@ class Chamado:
         alteracoes_detectadas = []
 
         if isinstance(ator, Cliente):
+            #Atualiza titulo
             if self.titulo != novo_titulo:
                 alteracoes_detectadas.append(f"Título alterado para: '{novo_titulo}'")
                 self.titulo = novo_titulo
+
+            #Atualiza descrição
             if self.descricao != nova_descricao:
                 preview = nova_descricao[:100].strip().replace('\n', ' ') + ('...' if len(nova_descricao) > 100 else '')
                 alteracoes_detectadas.append(f"Descrição alterada para: '{preview}'")
@@ -114,36 +133,67 @@ class Chamado:
             self.ultimo_editor = ator
             self.versao += 1  # Incrementa a versão
 
+    # =========================================================================
+    #                   FUNÇÃO DE GERAÇÃO DE RELATÓRIO PDF
+    # =========================================================================
+
     def gerar_relatorio_pdf(self, nome_arquivo="relatorio_chamado.pdf"):
+        """Gera um relatório em PDF com o histórico de alterações."""
+
+        # Configuração inicial do PDF
         pdf = FPDF(orientation='P', unit='mm', format='A4')
         pdf.set_auto_page_break(auto=True, margin=15)
         pdf.add_page()
+
+        # Título do Relatório
         pdf.set_font('Arial', 'B', 16)
         pdf.cell(0, 10, 'Relatório de Alterações do Chamado', 0, 1, 'C')
         pdf.set_font('Arial', '', 12)
         pdf.cell(0, 5, f'ID: {self.idChamado} | Título: {self.titulo} | Versão: {self.versao}', 0, 1, 'L')
+
+        # Determina se é Cliente ou outro requisitante para impressão
         req_nome = self.requisitante.nomeCliente if hasattr(self.requisitante, 'nomeCliente') else str(
             self.requisitante)
         pdf.cell(0, 5, f'Requisitante: {req_nome} | Status Atual: {self.status}', 0, 1, 'L')
         pdf.cell(0, 5, f'Data Abertura: {self.dataAbertura.strftime("%d/%m/%Y %H:%M:%S")}', 0, 1, 'L')
         pdf.cell(0, 5, '-' * 50, 0, 1, 'C')
+
+        # Definição das colunas e altura da linha
         COL_DATA, COL_DETALHES, LINE_HEIGHT = 40, 150, 7
+
+        # Cabeçalho da Tabela
         pdf.set_fill_color(200, 220, 255);
         pdf.set_font('Arial', 'B', 10)
         pdf.cell(COL_DATA, LINE_HEIGHT, 'Data e Hora', 1, 0, 'C', 1)
         pdf.cell(COL_DETALHES, LINE_HEIGHT, 'Detalhes da Alteração', 1, 1, 'C', 1)
+
+        # Inserção dos Dados
         pdf.set_font('Arial', '', 10)
+
         for registro in self._historico_alteracoes:
             data_formatada = registro['data'].strftime("%d/%m/%Y %H:%M:%S")
             detalhes = registro['detalhes']
+
+            # 1. Salva a posição inicial Y para o alinhamento
             y_inicial = pdf.get_y()
+
+            # 2. Escreve os detalhes da alteração (MultiCell para quebra de linha)
+            # Avança o X para a coluna de detalhes
             pdf.set_x(pdf.get_x() + COL_DATA)
             pdf.multi_cell(COL_DETALHES, 6, detalhes, 1, 'L', 0)
+
+            # 3. Determina a altura que a MultiCell usou e calcula o Y final
             y_final = pdf.get_y()
             altura_usada = y_final - y_inicial
+
+            # 4. Redesenha a célula de Data/Hora com a altura correta (para as bordas)
+            # Volta para a posição X da primeira coluna e Y inicial
             pdf.set_xy(pdf.l_margin, y_inicial)
             pdf.cell(COL_DATA, altura_usada, data_formatada, 1, 0, 'L', 0)
+
+            # 5. Avança o cursor para a próxima linha
             pdf.set_xy(pdf.l_margin, y_final)
+        # Saída do PDF
         pdf.output(nome_arquivo, 'F')
 
     def salvar_rascunho(self):

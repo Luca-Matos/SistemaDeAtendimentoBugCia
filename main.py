@@ -1,4 +1,4 @@
-# modern_main.py (Modificado)
+#======= IMPORTAÇÔES ===========
 import os
 import customtkinter as ctk
 from collections import deque
@@ -22,11 +22,13 @@ sistema_chamados.append(chamado_impressora)
 sistema_chamados.append(Chamado(cliente_logado, "Internet lenta", "Sites demoram para carregar."))
 chamado_urgente = Chamado(cliente_logado, "Servidor de arquivos offline",
                           "Ninguém consegue acessar os arquivos da rede.")
-chamado_urgente.prioridade = 5
+chamado_urgente.prioridade = 5 #prioridade mais alta
 sistema_chamados.append(chamado_urgente)
 
 
 class MainApplication(ctk.CTk):
+    """Classe principal da aplicação que herda de ctk.CTk (janela principal)."""
+
     def __init__(self):
         super().__init__()
         self.title("HelpDesk Moderno v2.0")
@@ -34,16 +36,21 @@ class MainApplication(ctk.CTk):
         self.fonte_titulo = ctk.CTkFont(family="Roboto", size=24, weight="bold")
         self.fonte_corpo = ctk.CTkFont(family="Roboto", size=14)
         self.fonte_pequena = ctk.CTkFont(family="Roboto", size=12)
+
+        # principal para gerenciar as telas (Frames)
         container = ctk.CTkFrame(self)
         container.pack(side="top", fill="both", expand=True)
         container.grid_rowconfigure(0, weight=1)
         container.grid_columnconfigure(0, weight=1)
-        self.frames = {}
+
+        self.frames = {} #armazena instancias das telas
         for F in (TelaLogin, TelaCliente, TelaAtendente):
             page_name = F.__name__
             frame = F(parent=container, controller=self)
             self.frames[page_name] = frame
             frame.grid(row=0, column=0, sticky="nsew")
+
+        #inicia o app na tela de login
         self.show_frame("TelaLogin")
 
     def show_frame(self, page_name):
@@ -53,12 +60,17 @@ class MainApplication(ctk.CTk):
 
 
 class PopupNovoChamado(ctk.CTkToplevel):
+    """Janela pop-up para o Cliente registrar um novo chamado."""
+
     def __init__(self, master, controller, callback):
         super().__init__(master)
         self.callback = callback
         self.title("Registrar Novo Chamado");
         self.geometry("500x400");
+
+        # Faz com que o popup fique sempre sobre a janela principal
         self.transient(master)
+        #Titulo e Descrição
         ctk.CTkLabel(self, text="Título do Chamado:", font=controller.fonte_corpo).pack(pady=(20, 5), padx=20,
                                                                                         anchor="w")
         self.titulo_entry = ctk.CTkEntry(self, width=460, font=controller.fonte_corpo);
@@ -67,9 +79,14 @@ class PopupNovoChamado(ctk.CTkToplevel):
                                                                                           anchor="w")
         self.desc_textbox = ctk.CTkTextbox(self, font=controller.fonte_pequena);
         self.desc_textbox.pack(padx=20, fill='both', expand=True)
+
+        # Botão para salvar
         ctk.CTkButton(self, text="Salvar Chamado", font=controller.fonte_corpo, command=self.salvar).pack(pady=20)
 
     def salvar(self):
+        """Pega os dados da entrada e chama a função de callback."""
+
+        # Pega o conteúdo do textbox respectivos
         titulo = self.titulo_entry.get();
         descricao = self.desc_textbox.get("1.0", "end-1c")
         if titulo and descricao:
@@ -80,13 +97,18 @@ class PopupNovoChamado(ctk.CTkToplevel):
 
 
 class TelaLogin(ctk.CTkFrame):
+    """Tela de Login inicial do sistema."""
+
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
+
+        # Frame centralizado para os campos de login
         login_frame = ctk.CTkFrame(self, width=300, corner_radius=10);
         login_frame.place(relx=0.5, rely=0.5, anchor="center")
         ctk.CTkLabel(login_frame, text="Bem-Vindo", font=controller.fonte_titulo).pack(pady=(20, 10))
-        # Mantendo os valores de login originais
+
+        # Campos de Usuário e Senha com valores padrão pré-preenchidos para teste
         self.user_entry = ctk.CTkEntry(login_frame, placeholder_text="Usuário", width=200, font=controller.fonte_corpo);
         self.user_entry.pack(pady=10, padx=20);
         self.user_entry.insert(0, "cliente")
@@ -94,6 +116,8 @@ class TelaLogin(ctk.CTkFrame):
                                        font=controller.fonte_corpo);
         self.pass_entry.pack(pady=10, padx=20);
         self.pass_entry.insert(0, "cliente")
+
+        # Botão Login
         ctk.CTkButton(login_frame, text="Login", font=controller.fonte_corpo, command=self.fazer_login).pack(pady=20,
                                                                                                              padx=20)
 
@@ -109,6 +133,8 @@ class TelaLogin(ctk.CTkFrame):
 
 
 class TelaCliente(ctk.CTkFrame):
+    """Verifica as credenciais e alterna para a tela apropriada."""
+
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller;
@@ -125,43 +151,52 @@ class TelaCliente(ctk.CTkFrame):
         self.scrollable_frame.grid(row=1, column=0, padx=20, pady=(0, 20), sticky="nsew")
 
     def on_show(self):
+        """Método chamado ao exibir a tela para recarregar os dados."""
         self.atualizar_lista_chamados()
 
     def registrar_chamado(self):
+        """Abre o pop-up para registrar um novo chamado."""
         PopupNovoChamado(self, self.controller, self.salvar_novo_chamado)
 
     def salvar_novo_chamado(self, titulo, descricao):
+        """Cria e adiciona um novo objeto Chamado à fila global."""
         novo_chamado = Chamado(cliente_logado, titulo, descricao);
         sistema_chamados.append(novo_chamado);
         self.atualizar_lista_chamados()
 
     def abrir_popup_detalhes(self, chamado):
+        """Abre o pop-up de detalhes do chamado com permissões de Cliente."""
         PopupDetalhes(self, self.controller, chamado, cliente_logado)
 
-    # --- INÍCIO DA MUDANÇA DE INTERFACE NA LISTA DE CHAMADOS ---
+
     def atualizar_lista_chamados(self):
+        """Limpa e recria os botões que representam os chamados do cliente na lista."""
+
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
+
+        # Filtra apenas os chamados do cliente logado
         lista_chamados_cliente = [c for c in sistema_chamados if c.requisitante == cliente_logado]
 
         for chamado in lista_chamados_cliente:
-            # Novo estilo do main.py: Um único botão para toda a linha.
+            # Texto do botão com informações resumidas
             label_text = (f"ID: {chamado.idChamado} | Título: {chamado.titulo} | "
                           f"Data: {chamado.dataAbertura.strftime('%d/%m/%Y')} | Status: {chamado.status}")
 
+            # Cria um botão para cada chamado
             item_button = ctk.CTkButton(
                 self.scrollable_frame,
                 text=label_text,
                 font=self.controller.fonte_corpo,
                 anchor="w",
-                # Mantido o comando original que chama o PopupDetalhes avançado
+                # Comando que abre o popup de detalhes
                 command=lambda c=chamado: self.abrir_popup_detalhes(c)
             )
             item_button.pack(fill="x", padx=10, pady=5)
-    # --- FIM DA MUDANÇA DE INTERFACE ---
 
 
 class TelaAtendente(ctk.CTkFrame):
+    """Tela principal do Atendente para gerenciar a fila de chamados."""
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
@@ -170,22 +205,30 @@ class TelaAtendente(ctk.CTkFrame):
         self.lista_atual = [];
         self.indice_atual = 0;
         self.chamado_para_mover = None
+
+        # Top Frame com Título e Botão de Logout
         top_frame = ctk.CTkFrame(self, fg_color="transparent");
         top_frame.grid(row=0, column=0, padx=20, pady=(20, 10), sticky="ew")
         ctk.CTkLabel(top_frame, text="Painel do Atendente", font=controller.fonte_titulo).pack(side="left")
         ctk.CTkButton(top_frame, text="Voltar (Logout)", font=controller.fonte_corpo,
                       command=lambda: controller.show_frame("TelaLogin")).pack(side="right")
+
+        # Carrossel de chamados (visualização detalhada do chamado atual)
         carrossel_frame = ctk.CTkFrame(self);
         carrossel_frame.grid(row=1, column=0, padx=20, pady=10, sticky="ew")
         self.chamado_label = ctk.CTkLabel(carrossel_frame, text="Nenhum chamado.", font=controller.fonte_corpo,
                                           height=60, wraplength=700)
         self.chamado_label.pack(pady=10, padx=10, fill="x")
+
+        # Botões do carrossel (Anterior, Detalhes/Editar, Próximo)
         botoes_carrossel = ctk.CTkFrame(carrossel_frame, fg_color="transparent");
         botoes_carrossel.pack(pady=10)
         ctk.CTkButton(botoes_carrossel, text="< Anterior", command=self.anterior_chamado).pack(side="left", padx=5)
         ctk.CTkButton(botoes_carrossel, text="Detalhes/Editar", command=self.abrir_popup_detalhes).pack(side="left",
                                                                                                         padx=5)
         ctk.CTkButton(botoes_carrossel, text="Próximo >", command=self.proximo_chamado).pack(side="left", padx=5)
+
+        # Controles de Ordenação
         controles_frame = ctk.CTkFrame(self, fg_color="transparent");
         controles_frame.grid(row=2, column=0, padx=20, pady=5, sticky="ew")
         controles_frame.grid_columnconfigure(1, weight=1)
@@ -194,19 +237,25 @@ class TelaAtendente(ctk.CTkFrame):
         self.segmented_button = ctk.CTkSegmentedButton(controles_frame, values=["Padrão", "Prioridade"],
                                                        variable=self.ordem_var, command=self.ordenar_e_atualizar)
         self.segmented_button.pack(side="left", padx=10)
+
+        # Scrollable Frame para a Fila de Chamados
         self.scrollable_frame = ctk.CTkScrollableFrame(self, label_text="Fila de Chamados");
         self.scrollable_frame.grid(row=3, column=0, padx=20, pady=(0, 20), sticky="nsew")
 
     def manipular_clique_lista(self, chamado_clicado):
+        """Lógica para reordenar a fila de chamados (apenas no modo Padrão)."""
         if self.ordem_var.get() != "Padrão": return
         global sistema_chamados
         if self.chamado_para_mover is None:
+            # Inicia o modo de mover (seleciona o primeiro chamado)
             self.chamado_para_mover = chamado_clicado;
             self.scrollable_frame.configure(
                 label_text="Clique na nova posição para o chamado (ou clique novamente para cancelar)")
         elif self.chamado_para_mover == chamado_clicado:
+            # Cancela o modo de mover
             self.resetar_modo_mover()
         else:
+            # Move o chamado para a nova posição na fila global
             try:
                 index_destino = list(sistema_chamados).index(chamado_clicado)
                 sistema_chamados.remove(self.chamado_para_mover);
@@ -220,33 +269,45 @@ class TelaAtendente(ctk.CTkFrame):
         self.atualizar_lista_ordenada()
 
     def resetar_modo_mover(self):
+        """Reseta a variável de controle de reordenação e o rótulo da lista."""
         self.chamado_para_mover = None;
         self.scrollable_frame.configure(label_text="Fila de Chamados")
 
     def on_show(self):
+        """Método chamado ao exibir a tela."""
         self.resetar_modo_mover();
         self.ordenar_e_atualizar(self.ordem_var.get())
 
     def ordenar_e_atualizar(self, ordem_selecionada):
+        """Define a lista de exibição com base na ordenação e atualiza a UI."""
         self.resetar_modo_mover()
         if ordem_selecionada == "Prioridade":
+            # Ordena por Prioridade (decrescente) e depois por Data de Abertura
             self.lista_atual = sorted(list(sistema_chamados), key=lambda c: (-c.prioridade, c.dataAbertura))
         else:
+            # Ordem Padrão (ordem de inserção na fila global deque)
             self.lista_atual = list(sistema_chamados)
+
         self.atualizar_carrossel(list(sistema_chamados));
         self.atualizar_lista_ordenada()
 
     def atualizar_lista_ordenada(self):
+        """Limpa e recria os botões da lista de chamados, respeitando a ordenação atual."""
+
         for widget in self.scrollable_frame.winfo_children(): widget.destroy()
         for chamado in self.lista_atual:
             label_text = f"ID: {chamado.idChamado} | Prio: {chamado.prioridade} | Título: {chamado.titulo} ({chamado.status})"
             item_button = ctk.CTkButton(self.scrollable_frame, text=label_text, font=self.controller.fonte_pequena,
                                         anchor="w")
             item_button.configure(command=lambda c=chamado: self.manipular_clique_lista(c))
+
+            # Destaca o chamado selecionado para move
             if self.chamado_para_mover == chamado: item_button.configure(fg_color="#1F6AA5")
             item_button.pack(fill="x", padx=10, pady=5)
 
     def atualizar_carrossel(self, lista_base):
+        """Atualiza o Label do carrossel com os detalhes do chamado atual."""
+
         if not lista_base: self.chamado_label.configure(text="Nenhum chamado para exibir."); return
         if self.indice_atual >= len(lista_base): self.indice_atual = 0
         chamado_atual = lista_base[self.indice_atual]
@@ -254,19 +315,25 @@ class TelaAtendente(ctk.CTkFrame):
         self.chamado_label.configure(text=texto)
 
     def proximo_chamado(self):
+        """Avança para o próximo chamado no carrossel (navega pela fila global)."""
+
         lista_base = list(sistema_chamados)
         if not lista_base: return
         self.indice_atual = (self.indice_atual + 1) % len(lista_base);
         self.atualizar_carrossel(lista_base)
 
     def anterior_chamado(self):
+        """Volta para o chamado anterior no carrossel (navega pela fila global)."""
+
         lista_base = list(sistema_chamados)
         if not lista_base: return
         self.indice_atual = (self.indice_atual - 1 + len(lista_base)) % len(lista_base);
         self.atualizar_carrossel(lista_base)
 
-    # CORREÇÃO AQUI: Adicionar argumento opcional para compatibilidade com PopupDetalhes
+
     def abrir_popup_detalhes(self, chamado_opcional=None):
+        """Abre o pop-up de detalhes/edição, usando o chamado do carrossel se nenhum for passado."""
+
         if chamado_opcional:
             chamado_para_editar = chamado_opcional
         else:
@@ -279,6 +346,7 @@ class TelaAtendente(ctk.CTkFrame):
 
 
 class PopupDetalhes(ctk.CTkToplevel):
+    """Janela pop-up para visualizar/editar os detalhes de um Chamado."""
     def __init__(self, master, controller, chamado, ator):
         super().__init__(master)
         self.master_frame = master
@@ -295,7 +363,7 @@ class PopupDetalhes(ctk.CTkToplevel):
 
         ctk.CTkLabel(header_frame, text="Título:", font=controller.fonte_corpo).pack(anchor="w")
 
-        # NOVO: Exibe a versão atual do chamado. A versão anterior é implicitamente a (versão atual - 1).
+        # NOVO: Exibe a versão atual do chamado.
         ctk.CTkLabel(header_frame, text=f"Versão Atual: {chamado.versao}", font=controller.fonte_pequena).pack(
             anchor="e")
 
@@ -313,6 +381,7 @@ class PopupDetalhes(ctk.CTkToplevel):
             # NOVO: Registra que o atendente abriu/visualizou o chamado.
             self.chamado.registrar_visualizacao(self.ator)
 
+            # Atendente não pode alterar Título/Descrição, apenas Prioridade
             self.titulo_entry.configure(state="disabled")
             self.desc_textbox.configure(state="disabled")
             ctk.CTkLabel(self, text="Prioridade (1-5):", font=controller.fonte_corpo).pack(pady=(15, 5))
@@ -322,11 +391,13 @@ class PopupDetalhes(ctk.CTkToplevel):
         # --- Frame de Botões ---
         btn_frame = ctk.CTkFrame(self, fg_color="transparent")
         btn_frame.pack(pady=20)
-        # Botão Desfazer (função preservada)
+        # Botão Desfazer (depende do histórico de rascunhos)
         self.btn_desfazer = ctk.CTkButton(btn_frame, text="Desfazer", command=self.desfazer_e_atualizar_ui)
         self.btn_desfazer.pack(side="left", padx=5)
         self.atualizar_estado_botoes_desfazer()
         ctk.CTkButton(btn_frame, text="Salvar Alterações", command=self.salvar).pack(side="left", padx=5)
+
+        # Botões exclusivos para Atendente
         if isinstance(self.ator, Atendente):
             ctk.CTkButton(btn_frame, text="Gerar Relatório PDF", command=self.gerar_pdf).pack(side="left", padx=5)
             ctk.CTkButton(btn_frame, text="Resolver", command=self.resolver).pack(side="left", padx=5)
@@ -334,12 +405,16 @@ class PopupDetalhes(ctk.CTkToplevel):
                           hover_color="#B71C1C").pack(side="left", padx=5)
 
     def atualizar_estado_botoes_desfazer(self):
+        """Habilita/desabilita o botão Desfazer com base no tamanho do histórico."""
+
         if len(self.chamado._historico_rascunhos) > 1:
             self.btn_desfazer.configure(state="normal")
         else:
             self.btn_desfazer.configure(state="disabled")
 
     def salvar(self):
+        """Coleta os dados editáveis e chama o método atualizar do objeto Chamado."""
+
         if isinstance(self.ator, Cliente):
             novo_titulo = self.titulo_entry.get()
             nova_descricao = self.desc_textbox.get("1.0", "end-1c")
@@ -356,6 +431,8 @@ class PopupDetalhes(ctk.CTkToplevel):
         self.destroy()
 
     def gerar_pdf(self):
+        """Abre a janela para salvar o PDF e chama o método de geração do Chamado."""
+
         nome_sugerido = f"relatorio_chamado_{self.chamado.idChamado}.pdf"
         caminho_arquivo = filedialog.asksaveasfilename(initialfile=nome_sugerido, defaultextension=".pdf",
                                                        filetypes=[("arquivos PDF", ".pdf"),
@@ -369,8 +446,10 @@ class PopupDetalhes(ctk.CTkToplevel):
         else:
             print("Geração de PDF cancelada.")
 
-    # Função de Desfazer (função e sistema de versão preservados)
+    # Função de Desfazer
     def desfazer_e_atualizar_ui(self):
+        """Tenta desfazer a última alteração e atualiza os campos da UI com o estado anterior."""
+
         if self.chamado.desfazer_alteracao(self.ator):
             if isinstance(self.ator, Cliente):
                 self.titulo_entry.delete(0, "end");
@@ -389,11 +468,14 @@ class PopupDetalhes(ctk.CTkToplevel):
             print("Não foi possível desfazer a alteração (verifique as permissões).")
 
     def resolver(self):
+        """Chama o método resolver do objeto Chamado (muda o status) e fecha o popup."""
+
         self.chamado.resolver(self.ator)
         self.master_frame.on_show()
         self.destroy()
 
     def remover(self):
+        """Remove o chamado da fila global e fecha o popup."""
         global sistema_chamados
         sistema_chamados.remove(self.chamado)
         self.master_frame.on_show()
