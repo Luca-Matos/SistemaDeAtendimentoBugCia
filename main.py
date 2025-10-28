@@ -4,6 +4,8 @@ import customtkinter as ctk #biblioteca customtkinter pra interface gráfica
 from arvore_bst import ArvoreBST # importa a classe da árvore de busca binária
 from models import Cliente, Atendente, Chamado
 import tkinter.filedialog as filedialog
+from PIL import Image
+import io
 
 # CONFIGURAÇÕES DE APARÊNCIA
 ctk.set_appearance_mode("dark")
@@ -288,10 +290,49 @@ class TelaAtendente(ctk.CTkFrame):
                                         font=self.controller.fonte_corpo, 
                                         command=self.buscar_chamado_interface)
         self.btn_buscar.pack(side="left", padx=5)
-        self.scrollable_frame = ctk.CTkScrollableFrame(self, label_text="Fila de Chamados")
-        
-        self.scrollable_frame = ctk.CTkScrollableFrame(self, label_text="Fila de Chamados"); self.scrollable_frame.grid(row=3, column=0, padx=20, pady=(0, 20), sticky="nsew")
 
+        # --- NOVO BOTÃO PARA VISUALIZAR A ÁRVORE ---
+        self.btn_visualizar = ctk.CTkButton(controles_frame, 
+                                            text="Visualizar Árvore", 
+                                            width=120, # Um pouco mais largo
+                                            font=self.controller.fonte_corpo, 
+                                            command=self.visualizar_arvore_interface)
+        self.btn_visualizar.pack(side="left", padx=(5, 20)) # Espaço à esquerda e direita
+        # --- FIM DO NOVO BOTÃO ---
+
+        # --- 1. Frame da Lista (o que já existia) ---
+        # Renomeamos de 'self.scrollable_frame' para 'self.frame_lista'
+        # e o colocamos na linha 3 da grid
+        self.frame_lista = ctk.CTkScrollableFrame(self, label_text="Fila de Chamados")
+        self.frame_lista.grid(row=3, column=0, padx=20, pady=(0, 20), sticky="nsew")
+
+        # --- 2. Frame da Árvore (novo) ---
+        # Este frame ficará NO MESMO LUGAR (linha 3), mas começará escondido
+        self.frame_arvore = ctk.CTkFrame(self)
+        self.frame_arvore.grid_rowconfigure(1, weight=1)    # Linha 1 do frame (imagem) vai expandir
+        self.frame_arvore.grid_columnconfigure(0, weight=1) # Coluna 0 do frame (imagem) vai expandir
+        
+        # Botão para voltar para a lista, DENTRO do frame da árvore
+        self.btn_voltar_lista = ctk.CTkButton(self.frame_arvore, 
+                                              text="< Voltar para Lista", 
+                                              command=self.mostrar_frame_lista)
+        self.btn_voltar_lista.grid(row=0, column=0, pady=10, padx=20, sticky="nw")
+
+        # Label onde a imagem da árvore será carregada
+        # Colocamos DENTRO de um CTkScrollableFrame para poder rolar a imagem se ela for muito grande
+        self.scroll_frame_imagem = ctk.CTkScrollableFrame(self.frame_arvore, label_text="Visualização da Árvore")
+        self.scroll_frame_imagem.grid(row=1, column=0, sticky="nsew", padx=20, pady=(0, 20))
+
+        self.label_imagem_arvore = ctk.CTkLabel(self.scroll_frame_imagem, text="")
+        self.label_imagem_arvore.pack(fill="both", expand=True)
+        self.label_imagem_arvore.bind("<Button-1>", self.abrir_imagem_fullscreen)
+
+        # Começa escondido. Usamos grid_remove() em vez de grid()
+        self.frame_arvore.grid_remove() 
+        
+        # Variável para guardar a referência da imagem (MUITO IMPORTANTE!)
+        # Se não fizermos isso, o "garbage collector" do Python apaga a imagem.
+        self.imagem_arvore_tk = None
 
     def manipular_clique_lista(self, chamado_clicado):
         print(f"Aviso: Reordenação manual desabilitada. Item selecionado: {chamado_clicado.id}")
@@ -301,7 +342,7 @@ class TelaAtendente(ctk.CTkFrame):
 
     def resetar_modo_mover(self):
         self.chamado_para_mover = None
-        self.scrollable_frame.configure(label_text="Fila de Chamados")
+        self.frame_lista.configure(label_text="Fila de Chamados")
 
     
     def on_show(self):
@@ -326,7 +367,7 @@ class TelaAtendente(ctk.CTkFrame):
 
     
     def atualizar_lista_ordenada(self):
-        for widget in self.scrollable_frame.winfo_children(): 
+        for widget in self.frame_lista.winfo_children(): 
             widget.destroy()
 
         # ('chamado_no' é um objeto 'No')
@@ -335,7 +376,7 @@ class TelaAtendente(ctk.CTkFrame):
             # CORREÇÃO: Acessar titulo e prioridade DENTRO do 'chamado_completo'
             label_text = f"ID: {chamado_no.id} | Prio: {chamado_no.chamado_completo.prioridade} | Título: {chamado_no.chamado_completo.titulo}"
             
-            item_button = ctk.CTkButton(self.scrollable_frame, text=label_text, font=self.controller.fonte_pequena, anchor="w")
+            item_button = ctk.CTkButton(self.frame_lista, text=label_text, font=self.controller.fonte_pequena, anchor="w")
             item_button.configure(command=lambda c=chamado_no: self.manipular_clique_lista(c)) # Passa o Nó
             if self.chamado_para_mover == chamado_no:
                 item_button.configure(fg_color="#1F6AA5") 
@@ -432,6 +473,88 @@ class TelaAtendente(ctk.CTkFrame):
             # Substituímos o print por uma janela pop-up de informação
             messagebox.showinfo("Busca de Chamado", f"Chamado com ID {id_buscado} não encontrado.") 
             self.entry_busca_id.delete(0, 'end') # Limpa o campo de busca  
+
+        # --- NOVA FUNÇÃO: VISUALIZAR ÁRVORE PELA INTERFACE ---
+    # --- NOVA FUNÇÃO: PARA MOSTRAR A LISTA ---
+    def mostrar_frame_lista(self):
+        """Esconde o frame da árvore e mostra o da lista."""
+        self.frame_arvore.grid_remove()
+        self.frame_lista.grid(row=3, column=0, padx=20, pady=(0, 20), sticky="nsew")
+        print("INFO: Exibindo frame da lista.")
+
+    # --- FUNÇÃO MODIFICADA: VISUALIZAR ÁRVORE PELA INTERFACE ---
+    def visualizar_arvore_interface(self):
+        """
+        Chama o método da árvore, recebe os bytes da imagem
+        e a exibe DENTRO da janela do CTk.
+        """
+        print("INFO: Solicitação para gerar visualização da árvore...")
+        try:
+            # 1. Pega o modo de aparência atual do app (dark ou light)
+            modo_aparencia = ctk.get_appearance_mode().lower()
+            
+            # 2. Chama o método da árvore (que agora retorna bytes)
+            png_data = sistema_chamados.visualizar_arvore(appearance_mode=modo_aparencia)
+            
+            if not png_data:
+                raise ValueError("Falha ao gerar a imagem (dados vazios).")
+
+            # 3. Converte os bytes em uma Imagem PIL
+            #    io.BytesIO() trata a string de bytes como um arquivo em memória
+            pil_image = Image.open(io.BytesIO(png_data))
+            
+            # 4. Cria o objeto CTkImage a partir da imagem PIL
+            #    Guardamos a referência em self.imagem_arvore_tk
+            self.imagem_arvore_tk = ctk.CTkImage(
+                light_image=pil_image,
+                dark_image=pil_image,  # Usamos a mesma imagem para ambos os modos
+                size=(pil_image.width, pil_image.height)
+            )
+
+            # 5. Configura o Label para MOSTRAR a nova imagem
+            self.label_imagem_arvore.configure(image=self.imagem_arvore_tk, text="")
+            
+            # 6. Troca os frames (esconde a lista, mostra a árvore)
+            self.frame_lista.grid_remove()
+            self.frame_arvore.grid(row=3, column=0, padx=20, pady=(0, 20), sticky="nsew")
+            print("INFO: Exibindo frame da árvore.")
+
+        except Exception as e:
+            # Captura qualquer erro
+            print(f"ERRO ao tentar gerar a árvore: {e}")
+            messagebox.showerror(
+                "Erro de Visualização", 
+                f"Não foi possível gerar a árvore.\n\n"
+                f"Detalhe: {e}"
+            )
+
+    def abrir_imagem_fullscreen(self, event=None):
+        """Abre a imagem da árvore em uma nova janela em tela cheia."""
+        if self.imagem_arvore_tk is None:
+            messagebox.showinfo("Visualização da Árvore", "Não há árvore para visualizar em tela cheia.")
+            return
+
+        try:
+            # Obtemos os bytes PNG novamente para passar para a nova janela.
+            # É importante que a função visualizar_arvore seja eficiente para isso.
+            modo_aparencia = ctk.get_appearance_mode().lower()
+            png_data_fullscreen = sistema_chamados.visualizar_arvore(appearance_mode=modo_aparencia)
+
+            if png_data_fullscreen:
+                # Passa os bytes da imagem e o tamanho atual da janela como sugestão
+                current_width = self.winfo_width()
+                current_height = self.winfo_height()
+                PopupVisualizacaoArvore(self, self.controller, png_data_fullscreen, (current_width, current_height))
+            else:
+                raise ValueError("Falha ao gerar dados da imagem para tela cheia.")
+
+        except Exception as e:
+            print(f"ERRO ao abrir imagem em tela cheia: {e}")
+            messagebox.showerror(
+                "Erro de Visualização", 
+                f"Não foi possível abrir a árvore em tela cheia.\n\n"
+                f"Detalhe: {e}"
+            )    
 
 
 #POPUP DETALHES CLIENTE 
@@ -595,6 +718,114 @@ class PopupDetalhes(ctk.CTkToplevel):
         self.master_frame.on_show()
         self.destroy()
 
+class PopupVisualizacaoArvore(ctk.CTkToplevel):
+    
+    def __init__(self, master, controller, png_data, initial_size):
+        super().__init__(master)
+        self.master_frame = master
+        self.controller = controller
+        self.png_data = png_data
+        
+        self.title("Visualização da Árvore (Tela Cheia)")
+        
+        # --- MUDANÇAS PARA FOCO E TELA CHEIA ---
+        self.attributes('-fullscreen', True) # Tenta tela cheia
+        self.bind("<Escape>", self.fechar_fullscreen) # Esc para sair
+        
+        # Garante que a janela fique no topo e PEGUE O FOCO (modal)
+        self.transient(master) 
+        self.grab_set() 
+        # --- FIM DAS MUDANÇAS ---
+
+        # Pega as dimensões reais da tela para o redimensionamento
+        self.screen_width = self.winfo_screenwidth()
+        self.screen_height = self.winfo_screenheight()
+        
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+        
+        # Frame de conteúdo com padding menor
+        content_frame = ctk.CTkFrame(self, fg_color="transparent")
+        content_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        content_frame.grid_rowconfigure(1, weight=1)
+        content_frame.grid_columnconfigure(0, weight=1)
+
+        # Botão para fechar a tela cheia
+        btn_fechar = ctk.CTkButton(content_frame, 
+                                   text="X Fechar (Esc)", 
+                                   command=self.destroy,
+                                   font=self.controller.fonte_corpo,
+                                   width=100) # Tamanho fixo
+        btn_fechar.grid(row=0, column=0, pady=(0, 10), padx=10, sticky="ne") # Apenas padding em baixo
+
+        # ScrollableFrame para a imagem, sem o label para mais espaço
+        self.scroll_frame_imagem_fullscreen = ctk.CTkScrollableFrame(content_frame)
+        self.scroll_frame_imagem_fullscreen.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0,10))
+        
+        # Centraliza a imagem dentro do scrollframe
+        self.scroll_frame_imagem_fullscreen.grid_columnconfigure(0, weight=1)
+        self.scroll_frame_imagem_fullscreen.grid_rowconfigure(0, weight=1)
+
+        self.label_imagem_arvore_fullscreen = ctk.CTkLabel(self.scroll_frame_imagem_fullscreen, text="")
+        # Usamos grid() em vez de pack() para garantir a centralização
+        self.label_imagem_arvore_fullscreen.grid(row=0, column=0, padx=10, pady=10)
+
+        # Referência da imagem
+        self.imagem_arvore_tk_fullscreen = None
+
+        # Chama a renderização
+        self.renderizar_imagem_fullscreen()
+
+    # --- MÉTODO DE RENDERIZAÇÃO MODIFICADO ---
+    def renderizar_imagem_fullscreen(self):
+        try:
+            pil_image = Image.open(io.BytesIO(self.png_data))
+            
+            # --- LÓGICA DE REDIMENSIONAMENTO PARA CABER NA TELA ---
+            
+            # 1. Obter o tamanho original da imagem (ex: 2000x1500)
+            original_width, original_height = pil_image.size
+            
+            # 2. Definir o tamanho máximo desejado
+            #    Vamos usar 95% da tela, para dar uma pequena margem de respiro
+            max_width = int(self.screen_width * 0.95)
+            max_height = int(self.screen_height * 0.95)
+
+            # 3. Verifica se a imagem é maior que o espaço disponível
+            if original_width > max_width or original_height > max_height:
+                
+                # 4. Usa a função .thumbnail() do Pillow.
+                #    Ela redimensiona a imagem *inplace* (no próprio objeto)
+                #    para caber dentro da "caixa" (max_width, max_height)
+                #    MANTENDO A PROPORÇÃO.
+                #    Image.Resampling.LANCZOS é o filtro de maior qualidade.
+                pil_image.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
+                
+                print(f"INFO: Imagem redimensionada de {original_width}x{original_height} para {pil_image.width}x{pil_image.height}")
+                
+                # O novo tamanho é o tamanho da imagem após o thumbnail
+                new_size = (pil_image.width, pil_image.height)
+            else:
+                # A imagem já cabe, usa o tamanho original
+                new_size = (original_width, original_height)
+                print(f"INFO: Imagem original {new_size} já cabe na tela.")
+
+            # 5. Cria o CTkImage com o NOVO tamanho calculado
+            self.imagem_arvore_tk_fullscreen = ctk.CTkImage(
+                light_image=pil_image,
+                dark_image=pil_image,
+                size=new_size
+            )
+            self.label_imagem_arvore_fullscreen.configure(image=self.imagem_arvore_tk_fullscreen, text="")
+            
+            # --- FIM DA LÓGICA ---
+            
+        except Exception as e:
+            print(f"ERRO ao renderizar imagem em tela cheia: {e}")
+            self.label_imagem_arvore_fullscreen.configure(text=f"Erro ao carregar imagem: {e}")
+
+    def fechar_fullscreen(self, event=None):
+        self.destroy()
 
 if __name__ == "__main__":
     app = MainApplication()
