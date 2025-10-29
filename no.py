@@ -26,6 +26,7 @@ class No:
         self.esquerda = None  #vai apontar para um nó cujo ID é menor que o ID do nó atual
         self.direita = None  #vai apontar para um nó cujo ID é maior que o ID do nó atual
         # essas duas linhas acima são as que fazem a ligação entre os nós, conectando a árvore e eles se baseiam nos valores dos ids para se organizarem!!! 
+        self.altura = 1  # altura do nó na árvore, começa em 1 para contar o próprio nó
 
     def __str__(self):
         # Função auxiliar para facilitar a impressão do nó durante os testes

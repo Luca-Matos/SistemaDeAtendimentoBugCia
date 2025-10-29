@@ -1,4 +1,4 @@
-import random #essa serve pra gerar IDS aleatorios
+
 from tkinter import messagebox #biblioteca padrão do python para janelas de mensagem
 import customtkinter as ctk #biblioteca customtkinter pra interface gráfica
 from arvore_bst import ArvoreBST # importa a classe da árvore de busca binária
@@ -187,36 +187,14 @@ class TelaCliente(ctk.CTkFrame):
     
     def salvar_novo_chamado(self, titulo, descricao):
         
-        #inicio da lógica do ID aleatório e único
-        
-        novo_id_unico = None #prepara uma variável para guardar o ID
-        
-        # 1. Entra em um loop para procurar um ID único
-        while True:
-            # 2. gera um número aleatório entre 1 e 200 pra n ficar gigante e sem sentido tipo ID 12 e ID 500
-            id_tentativa = random.randint(1, 200) 
-            
-            # 3.usa a função 'buscar' da nossa árvore para checar se esse ID já existe
-            no_existente = sistema_chamados.buscar(id_tentativa)
-            
-            # 4. se 'buscar' retornou None, significa que o ID NÃO existe (é único ebaaa)
-            if no_existente is None:
-                novo_id_unico = id_tentativa #vai guarda o ID encontrado
-                break #sai do loop 'while'
-            # (Se o ID já existia, o loop continua e tenta outro número aleatório pra n ter substituição de chamado)
+       
 
-        # FIM DA NOVA LÓGICA DE ID ALEATÓRIO!!! 
-
-        # 5.agora que TEMOS um ID único, criamos o objeto Chamado
         novo_chamado = Chamado(cliente_logado, titulo, descricao)
         
-        # 6. (IMPORTANTE!) Sobrescrevemos o ID sequencial pelo nosso ID aleatório único, porque o objeto Chamado (do models.py) cria automaticamente um ID sequencial (como 5 e ai ID 6 e assim adiante), mas nós queremos que ele use o ID aleatório (como 137) que acabamos de encontrar. Essa linha substitui o ID automático pelo ID aleatório que escolhemos.
-        novo_chamado.idChamado = novo_id_unico
-        
-        # 7.inserimos o objeto Chamado (agora com o ID aleatório) na árvore
+       
         sistema_chamados.inserir(novo_chamado) 
         
-        print(f"INFO: Novo chamado criado com ID aleatório: {novo_id_unico}") # Mensagem de teste
+        
         self.atualizar_lista_chamados()
     
     def atualizar_lista_chamados(self):
