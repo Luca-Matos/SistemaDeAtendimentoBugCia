@@ -1,4 +1,4 @@
-
+import random #essa serve pra gerar IDS aleatorios
 from tkinter import messagebox #biblioteca padrão do python para janelas de mensagem
 import customtkinter as ctk #biblioteca customtkinter pra interface gráfica
 from arvore_bst import ArvoreBST # importa a classe da árvore de busca binária
@@ -34,16 +34,16 @@ if MODO_DEMONSTRACAO:
     chamado_esquerda_direita = Chamado(cliente_logado, "Impressora com problema", "A luz do toner está piscando.")
     
     # 2. Forçamos os IDs (e ajustamos as prioridades, se quiser)
-    chamado_raiz.idChamado = 100
+    chamado_raiz.idChamado = 1
     chamado_raiz.prioridade = 5
     
-    chamado_esquerda.idChamado = 50
+    chamado_esquerda.idChamado = 2
     chamado_esquerda.prioridade = 2
 
-    chamado_direita.idChamado = 150
+    chamado_direita.idChamado = 3
     chamado_direita.prioridade = 1
-    
-    chamado_esquerda_direita.idChamado = 75
+
+    chamado_esquerda_direita.idChamado = 4
     chamado_esquerda_direita.prioridade = 3
 
     # 3. Inserimos na árvore usando o método inserir
@@ -186,15 +186,12 @@ class TelaCliente(ctk.CTkFrame):
     def registrar_chamado(self): PopupNovoChamado(self, self.controller, self.salvar_novo_chamado)
     
     def salvar_novo_chamado(self, titulo, descricao):
-        
-       
 
         novo_chamado = Chamado(cliente_logado, titulo, descricao)
         
-       
         sistema_chamados.inserir(novo_chamado) 
         
-        
+        print(f"INFO: Novo chamado criado com ID aleatório: {novo_chamado.idChamado}") # Mensagem de teste
         self.atualizar_lista_chamados()
     
     def atualizar_lista_chamados(self):
